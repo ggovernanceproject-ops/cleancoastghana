@@ -4,9 +4,10 @@ require('dotenv').config();
 const admin = require('firebase-admin');
 const readline = require('readline');
 
-const serviceAccount = require('./firebase-key.json');
+const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT);
 admin.initializeApp({
-  credential: admin.credential.cert(serviceAccount)
+  credential: admin.credential.cert(serviceAccount),
+  databaseURL: process.env.FIREBASE_DB_URL
 });
 
 const auth = admin.auth();
