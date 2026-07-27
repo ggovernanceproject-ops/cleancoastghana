@@ -1,0 +1,301 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin Login - GCCP</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    
+    :root {
+      --ocean: #006D77;
+      --ocean-deep: #004B55;
+      --gold: #C9A84C;
+      --dark: #0D1B1E;
+      --light: #F5F5F5;
+    }
+    
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+      background: linear-gradient(135deg, var(--ocean-deep), var(--ocean));
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #333;
+    }
+    
+    .login-container {
+      background: white;
+      border-radius: 8px;
+      box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+      width: 100%;
+      max-width: 420px;
+      padding: 2.5rem;
+      animation: slideIn 0.4s ease-out;
+    }
+    
+    @keyframes slideIn {
+      from {
+        transform: translateY(20px);
+        opacity: 0;
+      }
+      to {
+        transform: translateY(0);
+        opacity: 1;
+      }
+    }
+    
+    .login-header {
+      text-align: center;
+      margin-bottom: 2rem;
+    }
+    
+    .login-logo {
+      font-size: 2rem;
+      margin-bottom: 0.5rem;
+    }
+    
+    .login-title {
+      color: var(--ocean);
+      font-size: 1.5rem;
+      font-weight: 700;
+      margin-bottom: 0.5rem;
+    }
+    
+    .login-subtitle {
+      color: #999;
+      font-size: 0.9rem;
+    }
+    
+    .form-group {
+      margin-bottom: 1.5rem;
+    }
+    
+    label {
+      display: block;
+      margin-bottom: 0.6rem;
+      font-weight: 600;
+      color: #333;
+      font-size: 0.9rem;
+    }
+    
+    input {
+      width: 100%;
+      padding: 0.9rem;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      font-family: inherit;
+      font-size: 1rem;
+      transition: all 0.2s;
+    }
+    
+    input:focus {
+      outline: none;
+      border-color: var(--ocean);
+      box-shadow: 0 0 0 3px rgba(0,109,119,0.1);
+    }
+    
+    .btn-login {
+      width: 100%;
+      padding: 0.9rem;
+      background: linear-gradient(135deg, var(--ocean), var(--ocean-deep));
+      color: white;
+      border: none;
+      border-radius: 4px;
+      font-size: 1rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.5rem;
+    }
+    
+    .btn-login:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 5px 20px rgba(0,109,119,0.4);
+    }
+    
+    .btn-login:active {
+      transform: translateY(0);
+    }
+    
+    .btn-login.loading {
+      opacity: 0.7;
+      cursor: not-allowed;
+    }
+    
+    .spinner {
+      width: 18px;
+      height: 18px;
+      border: 3px solid rgba(255,255,255,0.3);
+      border-top-color: white;
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+    
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+    
+    .alert {
+      padding: 1rem;
+      border-radius: 4px;
+      margin-bottom: 1.5rem;
+      font-size: 0.9rem;
+      animation: slideIn 0.3s;
+    }
+    
+    .alert-error {
+      background: #f8d7da;
+      color: #721c24;
+      border: 1px solid #f5c6cb;
+    }
+    
+    .alert-info {
+      background: #d1ecf1;
+      color: #0c5460;
+      border: 1px solid #bee5eb;
+    }
+    
+    .login-footer {
+      text-align: center;
+      margin-top: 1.5rem;
+      font-size: 0.85rem;
+      color: #999;
+    }
+    
+    .login-footer a {
+      color: var(--ocean);
+      text-decoration: none;
+      font-weight: 600;
+    }
+    
+    .login-footer a:hover {
+      text-decoration: underline;
+    }
+  </style>
+</head>
+<body>
+
+<div class="login-container">
+  <div class="login-header">
+    <div class="login-logo">🌊</div>
+    <div class="login-title">GCCP Admin</div>
+    <div class="login-subtitle">Ghana Coastline Conservation Program</div>
+  </div>
+  
+  <div id="alert-container"></div>
+  
+  <form id="login-form" onsubmit="handleLogin(event)">
+    <div class="form-group">
+      <label for="email">Email Address</label>
+      <input 
+        type="email" 
+        id="email" 
+        name="email" 
+        placeholder="admin@gccp.org" 
+        required 
+        autocomplete="username"
+      >
+    </div>
+    
+    <div class="form-group">
+      <label for="password">Password</label>
+      <input 
+        type="password" 
+        id="password" 
+        name="password" 
+        placeholder="••••••••" 
+        required 
+        autocomplete="current-password"
+      >
+    </div>
+    
+    <button type="submit" class="btn-login" id="login-btn">
+      <span id="btn-text">Sign In →</span>
+    </button>
+  </form>
+  
+  <div class="login-footer">
+    Contact your administrator if you need access credentials.
+  </div>
+</div>
+
+<script>
+  const API_URL = '/api';
+  
+  // Redirect if already logged in
+  if (localStorage.getItem('adminToken')) {
+    window.location.href = '/admin-dashboard.html';
+  }
+  
+  async function handleLogin(event) {
+    event.preventDefault();
+    
+    const email = document.getElementById('email').value.trim();
+    const password = document.getElementById('password').value;
+    const btn = document.getElementById('login-btn');
+    const btnText = document.getElementById('btn-text');
+    
+    // Validate
+    if (!email || !password) {
+      showAlert('Please fill in all fields', 'error');
+      return;
+    }
+    
+    // Loading state
+    btn.classList.add('loading');
+    btnText.innerHTML = '<div class="spinner"></div>';
+    
+    try {
+      const response = await fetch(`${API_URL}/auth/login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password })
+      });
+      
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Login failed');
+      }
+      
+      const data = await response.json();
+      
+      // Save auth data
+      localStorage.setItem('adminToken', data.token);
+      localStorage.setItem('adminEmail', data.user.email);
+      
+      showAlert('Login successful! Redirecting...', 'info');
+      setTimeout(() => {
+        window.location.href = '/admin-dashboard.html';
+      }, 800);
+      
+    } catch (error) {
+      showAlert(error.message, 'error');
+      btn.classList.remove('loading');
+      btnText.textContent = 'Sign In →';
+    }
+  }
+  
+  function showAlert(message, type = 'info') {
+    const container = document.getElementById('alert-container');
+    const alert = document.createElement('div');
+    alert.className = `alert alert-${type}`;
+    alert.textContent = message;
+    container.appendChild(alert);
+    setTimeout(() => alert.remove(), 5000);
+  }
+  
+  // Enter key to submit
+  document.getElementById('login-form').addEventListener('keypress', (e) => {
+    if (e.key === 'Enter') {
+      document.getElementById('login-btn').click();
+    }
+  });
+</script>
+
+</body>
+</html>
