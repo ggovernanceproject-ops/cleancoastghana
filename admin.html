@@ -1,0 +1,1274 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>GCCP Admin Dashboard</title>
+  <meta name="robots" content="noindex, nofollow">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    :root {
+      --ocean: #006D77;
+      --ocean-deep: #004B55;
+      --sand: #E8D5B0;
+      --gold: #C9A84C;
+      --green: #2D6A4F;
+      --dark: #0D1B1E;
+      --light: #F5F5F5;
+      --text: #1a2e33;
+      --error: #c0392b;
+      --success: #27ae60;
+      --warn: #f39c12;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+      background: var(--light);
+      color: var(--text);
+      line-height: 1.5;
+    }
+
+    .container { max-width: 1400px; margin: 0 auto; }
+    .hidden { display: none !important; }
+
+    /* ── BOOT / AUTH CHECK ── */
+    #view-boot {
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #999;
+      font-size: 0.9rem;
+    }
+
+    /* ── LOGIN VIEW ── */
+    #view-login {
+      min-height: 100vh;
+      background: var(--dark);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 2rem;
+    }
+    .login-card {
+      background: white;
+      border-radius: 4px;
+      max-width: 420px;
+      width: 100%;
+      padding: 3rem;
+    }
+    .login-logo {
+      font-size: 0.8rem;
+      letter-spacing: 0.1em;
+      color: var(--gold);
+      text-transform: uppercase;
+      text-align: center;
+      margin-bottom: 1rem;
+    }
+    .login-card h1 {
+      font-size: 1.6rem;
+      color: var(--ocean);
+      text-align: center;
+      margin-bottom: 0.3rem;
+    }
+    .login-sub {
+      text-align: center;
+      font-size: 0.85rem;
+      color: #666;
+      margin-bottom: 2rem;
+    }
+    #login-error {
+      color: var(--error);
+      background: #f8d7da;
+      padding: 0.7rem 0.9rem;
+      border-radius: 4px;
+      font-size: 0.82rem;
+      margin-bottom: 1rem;
+      display: none;
+    }
+    .login-footnote {
+      text-align: center;
+      font-size: 0.78rem;
+      color: #999;
+      margin-top: 1.5rem;
+    }
+
+    /* ── LAYOUT ── */
+    .admin-wrapper {
+      display: grid;
+      grid-template-columns: 220px 1fr;
+      min-height: 100vh;
+    }
+
+    .sidebar {
+      background: var(--dark);
+      color: white;
+      padding: 2rem 0;
+      position: fixed;
+      left: 0;
+      top: 0;
+      width: 220px;
+      height: 100vh;
+      overflow-y: auto;
+      z-index: 100;
+    }
+
+    .sidebar-logo {
+      padding: 0 1.5rem 2rem;
+      border-bottom: 1px solid rgba(255,255,255,0.1);
+      font-size: 0.8rem;
+      letter-spacing: 0.1em;
+      color: var(--gold);
+      text-transform: uppercase;
+    }
+
+    .nav-item {
+      display: block;
+      padding: 0.8rem 1.5rem;
+      color: rgba(255,255,255,0.7);
+      text-decoration: none;
+      border-left: 3px solid transparent;
+      transition: all 0.2s;
+      font-size: 0.9rem;
+      cursor: pointer;
+    }
+
+    .nav-item:hover, .nav-item.active {
+      background: rgba(201,168,76,0.1);
+      color: white;
+      border-left-color: var(--gold);
+    }
+
+    .main-content {
+      margin-left: 220px;
+      padding: 2rem;
+    }
+
+    /* ── HEADER ── */
+    .header {
+      background: white;
+      border-bottom: 1px solid #e0e0e0;
+      padding: 1.5rem 2rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 2rem;
+      border-radius: 4px;
+    }
+
+    .header h1 {
+      font-size: 1.8rem;
+      color: var(--ocean);
+    }
+
+    .user-info {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+    }
+
+    .user-email {
+      font-size: 0.85rem;
+      color: #666;
+    }
+
+    .btn-logout {
+      background: var(--error);
+      color: white;
+      border: none;
+      padding: 0.5rem 1rem;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 0.85rem;
+      transition: background 0.2s;
+    }
+
+    .btn-logout:hover { background: #a03021; }
+
+    /* ── TABS ── */
+    .tabs {
+      display: flex;
+      gap: 1rem;
+      margin-bottom: 2rem;
+      border-bottom: 2px solid #e0e0e0;
+    }
+
+    .tab-btn {
+      background: none;
+      border: none;
+      padding: 1rem 1.5rem;
+      cursor: pointer;
+      font-size: 1rem;
+      color: #999;
+      border-bottom: 3px solid transparent;
+      margin-bottom: -2px;
+      transition: all 0.2s;
+    }
+
+    .tab-btn.active {
+      color: var(--ocean);
+      border-bottom-color: var(--ocean);
+    }
+
+    .tab-btn:hover { color: var(--ocean); }
+
+    .tab-content { display: none; }
+    .tab-content.active { display: block; animation: fadeIn 0.2s; }
+
+    @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+    /* ── CARDS ── */
+    .card {
+      background: white;
+      border-radius: 4px;
+      padding: 1.5rem;
+      border: 1px solid #e0e0e0;
+      margin-bottom: 1.5rem;
+    }
+
+    .card h3 {
+      color: var(--ocean);
+      margin-bottom: 1rem;
+    }
+
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 1rem;
+      margin-bottom: 2rem;
+    }
+
+    .stat-box {
+      background: linear-gradient(135deg, var(--ocean), var(--ocean-deep));
+      color: white;
+      padding: 1.5rem;
+      border-radius: 4px;
+      text-align: center;
+    }
+
+    .stat-box strong {
+      display: block;
+      font-size: 2rem;
+      margin-bottom: 0.5rem;
+    }
+
+    .stat-box small {
+      font-size: 0.85rem;
+      opacity: 0.9;
+    }
+
+    /* ── TABLES ── */
+    .table-wrapper {
+      overflow-x: auto;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.9rem;
+    }
+
+    th {
+      background: #f8f9fa;
+      padding: 1rem;
+      text-align: left;
+      font-weight: 600;
+      color: #666;
+      border-bottom: 2px solid #e0e0e0;
+      text-transform: uppercase;
+      font-size: 0.75rem;
+      letter-spacing: 0.05em;
+    }
+
+    td {
+      padding: 1rem;
+      border-bottom: 1px solid #f0f0f0;
+    }
+
+    tr:hover td { background: #fafafa; }
+
+    .badge {
+      display: inline-block;
+      padding: 0.3rem 0.8rem;
+      border-radius: 10px;
+      font-size: 0.75rem;
+      font-weight: 600;
+    }
+
+    .badge-success {
+      background: #d4edda;
+      color: #155724;
+    }
+
+    .badge-warning {
+      background: #fff3cd;
+      color: #856404;
+    }
+
+    .badge-pending {
+      background: #e7f3ff;
+      color: #0066cc;
+    }
+
+    .badge-info {
+      background: #e7f3ff;
+      color: #0066cc;
+    }
+
+    .action-btns {
+      display: flex;
+      gap: 0.5rem;
+    }
+
+    .btn-sm {
+      background: var(--ocean);
+      color: white;
+      border: none;
+      padding: 0.4rem 0.8rem;
+      border-radius: 3px;
+      cursor: pointer;
+      font-size: 0.75rem;
+      transition: background 0.2s;
+    }
+
+    .btn-sm:hover { background: var(--ocean-deep); }
+
+    .btn-sm.danger {
+      background: var(--error);
+    }
+
+    .btn-sm.danger:hover { background: #a03021; }
+
+    /* ── FORMS ── */
+    .form-group {
+      margin-bottom: 1rem;
+    }
+
+    label {
+      display: block;
+      margin-bottom: 0.5rem;
+      font-weight: 600;
+      color: #333;
+      font-size: 0.9rem;
+    }
+
+    input, textarea, select {
+      width: 100%;
+      padding: 0.7rem;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      font-family: inherit;
+      font-size: 0.95rem;
+    }
+
+    input:focus, textarea:focus, select:focus {
+      outline: none;
+      border-color: var(--ocean);
+      box-shadow: 0 0 0 3px rgba(0,109,119,0.1);
+    }
+
+    textarea {
+      resize: vertical;
+      min-height: 100px;
+    }
+
+    .form-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1rem;
+    }
+
+    .btn-primary {
+      background: var(--ocean);
+      color: white;
+      border: none;
+      padding: 0.8rem 1.5rem;
+      border-radius: 4px;
+      cursor: pointer;
+      font-weight: 600;
+      transition: background 0.2s;
+    }
+
+    .btn-primary:hover { background: var(--ocean-deep); }
+    .btn-primary:disabled { opacity: 0.6; cursor: not-allowed; }
+
+    .btn-secondary {
+      background: #f0f0f0;
+      color: #333;
+      border: 1px solid #ddd;
+      padding: 0.8rem 1.5rem;
+      border-radius: 4px;
+      cursor: pointer;
+      font-weight: 600;
+      transition: all 0.2s;
+    }
+
+    .btn-secondary:hover { background: #e0e0e0; }
+
+    /* ── ALERTS ── */
+    .alert {
+      padding: 1rem;
+      border-radius: 4px;
+      margin-bottom: 1rem;
+      animation: slideIn 0.3s;
+    }
+
+    @keyframes slideIn { from { transform: translateY(-10px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+
+    .alert-success {
+      background: #d4edda;
+      color: #155724;
+      border: 1px solid #c3e6cb;
+    }
+
+    .alert-error {
+      background: #f8d7da;
+      color: #721c24;
+      border: 1px solid #f5c6cb;
+    }
+
+    .alert-info {
+      background: #d1ecf1;
+      color: #0c5460;
+      border: 1px solid #bee5eb;
+    }
+
+    /* ── MODALS ── */
+    .modal {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.5);
+      z-index: 1000;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .modal.active {
+      display: flex;
+      animation: fadeIn 0.2s;
+    }
+
+    .modal-content {
+      background: white;
+      border-radius: 4px;
+      padding: 2rem;
+      max-width: 600px;
+      width: 90%;
+      max-height: 90vh;
+      overflow-y: auto;
+      position: relative;
+    }
+
+    .modal-close {
+      position: absolute;
+      top: 1rem;
+      right: 1rem;
+      background: none;
+      border: none;
+      font-size: 1.5rem;
+      cursor: pointer;
+      color: #999;
+    }
+
+    .modal-close:hover { color: var(--error); }
+
+    /* ── EMPTY STATE ── */
+    .empty-state {
+      text-align: center;
+      padding: 3rem 1rem;
+      color: #999;
+    }
+
+    .empty-state p { font-size: 1.1rem; }
+
+    /* ── LOADING ── */
+    .spinner {
+      display: inline-block;
+      width: 20px;
+      height: 20px;
+      border: 3px solid #f0f0f0;
+      border-top-color: var(--ocean);
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    .loading { text-align: center; padding: 2rem; }
+
+    /* ── RESPONSIVE ── */
+    @media (max-width: 768px) {
+      .admin-wrapper {
+        grid-template-columns: 1fr;
+      }
+
+      .sidebar {
+        width: 100%;
+        height: auto;
+        position: relative;
+        padding: 1rem;
+      }
+
+      .main-content {
+        margin-left: 0;
+        padding: 1rem;
+      }
+
+      .form-row {
+        grid-template-columns: 1fr;
+      }
+
+      .tabs {
+        flex-wrap: wrap;
+      }
+
+      .header {
+        flex-direction: column;
+        gap: 1rem;
+        text-align: center;
+      }
+    }
+  </style>
+</head>
+<body>
+
+<!-- Shown briefly while Firebase determines auth state -->
+<div id="view-boot">Loading…</div>
+
+<!-- ================= LOGIN VIEW ================= -->
+<div id="view-login" class="hidden">
+  <div class="login-card">
+    <div class="login-logo">GCCP Admin</div>
+    <h1>Sign in</h1>
+    <p class="login-sub">Ghana Coastline Conservation Program</p>
+
+    <div id="login-error"></div>
+
+    <div class="form-group">
+      <label>Email Address</label>
+      <input type="email" id="admin-email-input" placeholder="admin@gccp.org" autocomplete="username">
+    </div>
+    <div class="form-group">
+      <label>Password</label>
+      <input type="password" id="admin-password-input" placeholder="••••••••" autocomplete="current-password">
+    </div>
+
+    <button class="btn-primary" id="login-btn" style="width:100%;" onclick="adminLogin()">Sign In →</button>
+
+    <p class="login-footnote">Contact your administrator if you need access credentials.</p>
+  </div>
+</div>
+
+<!-- ================= DASHBOARD VIEW ================= -->
+<div id="view-dashboard" class="hidden">
+<div class="admin-wrapper">
+  <!-- SIDEBAR -->
+  <div class="sidebar">
+    <div class="sidebar-logo">GCCP Admin</div>
+    <a class="nav-item active" onclick="switchTab('dashboard')">📊 Dashboard</a>
+    <a class="nav-item" onclick="switchTab('donations')">💳 Donations</a>
+    <a class="nav-item" onclick="switchTab('investors')">👥 Investors</a>
+    <a class="nav-item" onclick="switchTab('contacts')">📧 Contacts</a>
+    <a class="nav-item" onclick="switchTab('content')">📝 Page Content</a>
+    <a class="nav-item" onclick="switchTab('settings')">⚙️ Settings</a>
+  </div>
+
+  <!-- MAIN CONTENT -->
+  <div class="main-content">
+    <!-- HEADER -->
+    <div class="header">
+      <h1>Admin Dashboard</h1>
+      <div class="user-info">
+        <div>
+          <div class="user-email" id="user-email"></div>
+          <div style="font-size:0.75rem;color:#999;">Logged in</div>
+        </div>
+        <button class="btn-logout" onclick="logout()">Logout</button>
+      </div>
+    </div>
+
+    <!-- ALERTS -->
+    <div id="alert-container"></div>
+
+    <!-- DASHBOARD TAB -->
+    <div id="tab-dashboard" class="tab-content active">
+      <div class="stats-grid" id="stats-container">
+        <div class="stat-box">
+          <strong id="stat-donations">-</strong>
+          <small>Total Donations</small>
+        </div>
+        <div class="stat-box">
+          <strong id="stat-investors">-</strong>
+          <small>Investor Inquiries</small>
+        </div>
+        <div class="stat-box">
+          <strong id="stat-contacts">-</strong>
+          <small>Contact Messages</small>
+        </div>
+        <div class="stat-box">
+          <strong id="stat-revenue">-</strong>
+          <small>Revenue (GHS)</small>
+        </div>
+      </div>
+
+      <div class="card">
+        <h3>Recent Donations</h3>
+        <div id="recent-donations" class="loading"><div class="spinner"></div> Loading...</div>
+      </div>
+    </div>
+
+    <!-- DONATIONS TAB -->
+    <div id="tab-donations" class="tab-content">
+      <div class="card">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1.5rem;">
+          <h3 style="margin:0;">Donations</h3>
+          <button class="btn-secondary" onclick="exportData('donations')">📥 Export CSV</button>
+        </div>
+        <div id="donations-table" class="loading"><div class="spinner"></div> Loading...</div>
+      </div>
+    </div>
+
+    <!-- INVESTORS TAB -->
+    <div id="tab-investors" class="tab-content">
+      <div class="card">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1.5rem;">
+          <h3 style="margin:0;">Investor Inquiries</h3>
+          <button class="btn-secondary" onclick="exportData('investor_inquiries')">📥 Export CSV</button>
+        </div>
+        <div id="investors-table" class="loading"><div class="spinner"></div> Loading...</div>
+      </div>
+    </div>
+
+    <!-- CONTACTS TAB -->
+    <div id="tab-contacts" class="tab-content">
+      <div class="card">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1.5rem;">
+          <h3 style="margin:0;">Contact Messages</h3>
+          <button class="btn-secondary" onclick="exportData('contact_messages')">📥 Export CSV</button>
+        </div>
+        <div id="contacts-table" class="loading"><div class="spinner"></div> Loading...</div>
+      </div>
+    </div>
+
+    <!-- CONTENT TAB -->
+    <div id="tab-content" class="tab-content">
+      <div class="card">
+        <h3>Page Content Editor</h3>
+        <div class="form-group">
+          <label>Select Page</label>
+          <select id="content-page" onchange="loadContent()">
+            <option value="home">Home</option>
+            <option value="about">About</option>
+            <option value="programs">Programs</option>
+          </select>
+        </div>
+        <div id="content-editor"></div>
+      </div>
+    </div>
+
+    <!-- SETTINGS TAB -->
+    <div id="tab-settings" class="tab-content">
+      <div class="card">
+        <h3>Site Settings</h3>
+        <div class="form-group">
+          <label>Site Title</label>
+          <input type="text" id="setting-title" placeholder="Ghana Coastline Conservation Program">
+        </div>
+        <div class="form-group">
+          <label>Hero Subtitle</label>
+          <input type="text" id="setting-hero-subtitle" placeholder="Protecting Our Future">
+        </div>
+        <div class="form-group">
+          <label>Footer Text</label>
+          <textarea id="setting-footer" placeholder="Footer content..."></textarea>
+        </div>
+        <div class="form-group">
+          <label>Contact Email</label>
+          <input type="email" id="setting-email" placeholder="contact@gccp.org">
+        </div>
+        <button class="btn-primary" onclick="saveSettings()">Save Settings</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- MODALS -->
+<div id="detail-modal" class="modal">
+  <div class="modal-content">
+    <button class="modal-close" onclick="closeModal('detail')">×</button>
+    <div id="modal-body"></div>
+  </div>
+</div>
+</div><!-- /view-dashboard -->
+
+<!-- Firebase Auth — same project/credentials as the public site's admin login -->
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+
+const cfg = {
+  apiKey: "AIzaSyC9GPU8fUKfTFYUiBwOexpdjqe3vLmAk10",
+  authDomain: "ghana-coastline-conservation.firebaseapp.com",
+  projectId: "ghana-coastline-conservation",
+  storageBucket: "ghana-coastline-conservation.firebasestorage.app",
+  messagingSenderId: "835315451838",
+  appId: "1:835315451838:web:afb2b34ee7e1671299dbef"
+};
+
+function show(viewId) {
+  ['view-boot', 'view-login', 'view-dashboard'].forEach(id => {
+    document.getElementById(id).classList.toggle('hidden', id !== viewId);
+  });
+}
+window._showView = show;
+
+try {
+  const app = initializeApp(cfg);
+  const auth = getAuth(app);
+
+  window._auth = auth;
+  window._fbSignIn = signInWithEmailAndPassword;
+  window._fbSignOut = signOut;
+  window._firebaseReady = true;
+
+  onAuthStateChanged(auth, (u) => {
+    if (u) {
+      const emailEl = document.getElementById('user-email');
+      if (emailEl) emailEl.textContent = u.email;
+      show('view-dashboard');
+      if (window._initDashboard) window._initDashboard();
+    } else {
+      show('view-login');
+    }
+  });
+
+  console.log('%cFirebase ready ✓', 'color:#006D77;font-weight:bold');
+} catch (e) {
+  console.error('Firebase init failed:', e.message);
+  window._firebaseReady = false;
+  show('view-login');
+}
+</script>
+
+<script>
+  /* ── LOGIN ── */
+  function showLoginError(msg) {
+    const el = document.getElementById('login-error');
+    el.textContent = msg;
+    el.style.display = 'block';
+  }
+  function hideLoginError() {
+    document.getElementById('login-error').style.display = 'none';
+  }
+
+  async function adminLogin() {
+    const em = document.getElementById('admin-email-input').value.trim();
+    const pw = document.getElementById('admin-password-input').value;
+    const btn = document.getElementById('login-btn');
+
+    hideLoginError();
+
+    if (!em || !pw) {
+      showLoginError('Please enter your email and password.');
+      return;
+    }
+    if (!window._firebaseReady) {
+      showLoginError('Firebase not connected. Please refresh and try again.');
+      return;
+    }
+
+    btn.disabled = true;
+    btn.textContent = 'Signing in…';
+
+    try {
+      await window._fbSignIn(window._auth, em, pw);
+      // onAuthStateChanged flips the view to the dashboard automatically.
+    } catch (e) {
+      btn.disabled = false;
+      btn.textContent = 'Sign In →';
+      const msg = (e.code === 'auth/invalid-credential' || e.code === 'auth/wrong-password')
+        ? 'Invalid email or password.'
+        : e.code === 'auth/too-many-requests'
+        ? 'Too many attempts. Try again later.'
+        : e.message;
+      showLoginError(msg);
+    }
+  }
+
+  document.addEventListener('DOMContentLoaded', () => {
+    const pwInput = document.getElementById('admin-password-input');
+    if (pwInput) {
+      pwInput.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') adminLogin();
+      });
+    }
+  });
+
+  /* ── DASHBOARD ── */
+  const API_URL = '/api';
+  let dashboardInitialized = false;
+
+  window._initDashboard = function () {
+    if (dashboardInitialized) return; // don't reset tabs/state on token refresh etc.
+    dashboardInitialized = true;
+    loadDashboard();
+  };
+
+  async function logout() {
+    dashboardInitialized = false;
+    if (window._fbSignOut && window._auth) await window._fbSignOut(window._auth);
+    document.getElementById('admin-email-input').value = '';
+    document.getElementById('admin-password-input').value = '';
+    // onAuthStateChanged flips the view back to login automatically.
+  }
+
+  // ── TAB SWITCHING ──
+  function switchTab(tab) {
+    document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+    document.getElementById(`tab-${tab}`).classList.add('active');
+    if (typeof event !== 'undefined' && event.target) event.target.classList.add('active');
+
+    if (tab === 'donations') loadDonations();
+    if (tab === 'investors') loadInvestors();
+    if (tab === 'contacts') loadContacts();
+    if (tab === 'content') loadContent();
+    if (tab === 'settings') loadSettings();
+  }
+
+  // ── API CALLS (authenticated with the signed-in admin's Firebase ID token) ──
+  async function apiCall(endpoint, options = {}) {
+    if (!window._auth || !window._auth.currentUser) {
+      logout();
+      return;
+    }
+
+    let idToken;
+    try {
+      idToken = await window._auth.currentUser.getIdToken();
+    } catch (e) {
+      logout();
+      return;
+    }
+
+    const headers = {
+      'Authorization': `Bearer ${idToken}`,
+      'Content-Type': 'application/json',
+      ...options.headers
+    };
+
+    try {
+      const response = await fetch(`${API_URL}${endpoint}`, {
+        ...options,
+        headers
+      });
+
+      if (response.status === 401) {
+        logout();
+        return;
+      }
+
+      if (!response.ok) {
+        const error = await response.json();
+        showAlert(error.error || 'Error', 'error');
+        throw new Error(error.error);
+      }
+
+      return await response.json();
+    } catch (error) {
+      console.error('API Error:', error);
+      showAlert(error.message, 'error');
+    }
+  }
+
+  // ── DASHBOARD ──
+  async function loadDashboard() {
+    const donations = await apiCall('/donations');
+    const investors = await apiCall('/investors');
+    const contacts = await apiCall('/contacts');
+
+    if (donations) {
+      document.getElementById('stat-donations').textContent = donations.stats.total;
+      document.getElementById('stat-revenue').textContent = donations.stats.totalAmount.toFixed(2);
+    }
+    if (investors) document.getElementById('stat-investors').textContent = investors.total;
+    if (contacts) document.getElementById('stat-contacts').textContent = contacts.total;
+
+    // Show recent donations
+    if (donations && donations.data.length > 0) {
+      const html = `
+        <div class="table-wrapper">
+          <table>
+            <thead>
+              <tr>
+                <th>Date</th>
+                <th>Name</th>
+                <th>Amount</th>
+                <th>Status</th>
+                <th>Action</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${donations.data.slice(0, 5).map(d => `
+                <tr>
+                  <td>${new Date(d.createdAt.seconds * 1000).toLocaleDateString()}</td>
+                  <td>${d.donor_name}</td>
+                  <td>${d.currency} ${d.amount}</td>
+                  <td><span class="badge ${d.status === 'paid' ? 'badge-success' : 'badge-warning'}">${d.status}</span></td>
+                  <td><button class="btn-sm" onclick="viewDetail('donations', '${d.id}')">View</button></td>
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
+        </div>
+      `;
+      document.getElementById('recent-donations').innerHTML = html;
+    }
+  }
+
+  // ── DONATIONS ──
+  async function loadDonations() {
+    const data = await apiCall('/donations?limit=500');
+    if (!data) return;
+
+    const html = `
+      <div class="table-wrapper">
+        <table>
+          <thead>
+            <tr>
+              <th>Date</th>
+              <th>Name</th>
+              <th>Email</th>
+              <th>Amount</th>
+              <th>Currency</th>
+              <th>Status</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${data.data.map(d => `
+              <tr>
+                <td>${new Date(d.createdAt.seconds * 1000).toLocaleDateString()}</td>
+                <td>${d.donor_name}</td>
+                <td>${d.email}</td>
+                <td><strong>${d.amount}</strong></td>
+                <td>${d.currency}</td>
+                <td><span class="badge ${d.status === 'paid' ? 'badge-success' : 'badge-warning'}">${d.status}</span></td>
+                <td>
+                  <div class="action-btns">
+                    <button class="btn-sm" onclick="editDonation('${d.id}')">Edit</button>
+                    <button class="btn-sm danger" onclick="deleteRecord('donations', '${d.id}')">Delete</button>
+                  </div>
+                </td>
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
+      </div>
+    `;
+    document.getElementById('donations-table').innerHTML = html;
+  }
+
+  async function editDonation(id) {
+    const data = await apiCall('/donations');
+    const donation = data.data.find(d => d.id === id);
+    if (!donation) return;
+
+    const html = `
+      <h3>Edit Donation</h3>
+      <div class="form-group">
+        <label>Donor Name</label>
+        <input type="text" value="${donation.donor_name}" disabled>
+      </div>
+      <div class="form-group">
+        <label>Status</label>
+        <select id="edit-status">
+          <option ${donation.status === 'pending' ? 'selected' : ''}>pending</option>
+          <option ${donation.status === 'paid' ? 'selected' : ''}>paid</option>
+          <option ${donation.status === 'failed' ? 'selected' : ''}>failed</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Notes</label>
+        <textarea id="edit-notes">${donation.notes || ''}</textarea>
+      </div>
+      <button class="btn-primary" onclick="saveDonation('${id}')">Save Changes</button>
+    `;
+
+    document.getElementById('modal-body').innerHTML = html;
+    document.getElementById('detail-modal').classList.add('active');
+  }
+
+  async function saveDonation(id) {
+    const status = document.getElementById('edit-status').value;
+    const notes = document.getElementById('edit-notes').value;
+
+    const result = await apiCall(`/donations/${id}`, {
+      method: 'PATCH',
+      body: JSON.stringify({ status, notes })
+    });
+
+    if (result) {
+      showAlert('Donation updated', 'success');
+      closeModal('detail');
+      loadDonations();
+    }
+  }
+
+  // ── INVESTORS ──
+  async function loadInvestors() {
+    const data = await apiCall('/investors?limit=500');
+    if (!data) return;
+
+    const html = `
+      <div class="table-wrapper">
+        <table>
+          <thead>
+            <tr>
+              <th>Date</th>
+              <th>Name</th>
+              <th>Organisation</th>
+              <th>Email</th>
+              <th>Tier</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${data.data.map(d => `
+              <tr>
+                <td>${new Date(d.createdAt.seconds * 1000).toLocaleDateString()}</td>
+                <td>${d.name}</td>
+                <td>${d.org}</td>
+                <td>${d.email}</td>
+                <td><span class="badge badge-info">${d.tier}</span></td>
+                <td>
+                  <div class="action-btns">
+                    <button class="btn-sm" onclick="viewInvestor('${d.id}')">View</button>
+                    <button class="btn-sm danger" onclick="deleteRecord('investor_inquiries', '${d.id}')">Delete</button>
+                  </div>
+                </td>
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
+      </div>
+    `;
+    document.getElementById('investors-table').innerHTML = html;
+  }
+
+  async function viewInvestor(id) {
+    const data = await apiCall('/investors');
+    const investor = data.data.find(i => i.id === id);
+    if (!investor) return;
+
+    const html = `
+      <h3>${investor.name}</h3>
+      <div class="form-group">
+        <label>Organisation</label>
+        <input type="text" value="${investor.org}" disabled>
+      </div>
+      <div class="form-group">
+        <label>Email</label>
+        <input type="text" value="${investor.email}" disabled>
+      </div>
+      <div class="form-group">
+        <label>Tier</label>
+        <input type="text" value="${investor.tier}" disabled>
+      </div>
+      <div class="form-group">
+        <label>Message</label>
+        <textarea disabled>${investor.message}</textarea>
+      </div>
+    `;
+
+    document.getElementById('modal-body').innerHTML = html;
+    document.getElementById('detail-modal').classList.add('active');
+  }
+
+  // ── CONTACTS ──
+  async function loadContacts() {
+    const data = await apiCall('/contacts?limit=500');
+    if (!data) return;
+
+    const html = `
+      <div class="table-wrapper">
+        <table>
+          <thead>
+            <tr>
+              <th>Date</th>
+              <th>Name</th>
+              <th>Email</th>
+              <th>Subject</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${data.data.map(d => `
+              <tr>
+                <td>${new Date(d.createdAt.seconds * 1000).toLocaleDateString()}</td>
+                <td>${d.name}</td>
+                <td>${d.email}</td>
+                <td>${d.subject}</td>
+                <td>
+                  <div class="action-btns">
+                    <button class="btn-sm" onclick="viewContact('${d.id}')">View</button>
+                    <button class="btn-sm danger" onclick="deleteRecord('contact_messages', '${d.id}')">Delete</button>
+                  </div>
+                </td>
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
+      </div>
+    `;
+    document.getElementById('contacts-table').innerHTML = html;
+  }
+
+  async function viewContact(id) {
+    const data = await apiCall('/contacts');
+    const contact = data.data.find(c => c.id === id);
+    if (!contact) return;
+
+    const html = `
+      <h3>${contact.name}</h3>
+      <div class="form-group">
+        <label>Email</label>
+        <input type="text" value="${contact.email}" disabled>
+      </div>
+      <div class="form-group">
+        <label>Subject</label>
+        <input type="text" value="${contact.subject}" disabled>
+      </div>
+      <div class="form-group">
+        <label>Message</label>
+        <textarea disabled>${contact.message}</textarea>
+      </div>
+    `;
+
+    document.getElementById('modal-body').innerHTML = html;
+    document.getElementById('detail-modal').classList.add('active');
+  }
+
+  // ── CONTENT MANAGEMENT ──
+  async function loadContent() {
+    const page = document.getElementById('content-page').value;
+    const data = await apiCall(`/content/${page}`);
+    if (!data) return;
+
+    let html = `<h4 style="margin-top:1.5rem;margin-bottom:1rem;">Hero Section</h4>`;
+    html += `<div class="form-group">
+      <label>Heading</label>
+      <input type="text" id="content-hero-heading" value="${data.sections?.hero?.heading || ''}" placeholder="Main heading">
+    </div>`;
+    html += `<div class="form-group">
+      <label>Subheading</label>
+      <input type="text" id="content-hero-subheading" value="${data.sections?.hero?.subheading || ''}" placeholder="Subheading">
+    </div>`;
+
+    html += `<h4 style="margin-top:1.5rem;margin-bottom:1rem;">About Section</h4>`;
+    html += `<div class="form-group">
+      <label>About Title</label>
+      <input type="text" id="content-about-title" value="${data.sections?.about?.title || ''}" placeholder="About title">
+    </div>`;
+    html += `<div class="form-group">
+      <label>About Description</label>
+      <textarea id="content-about-desc">${data.sections?.about?.description || ''}</textarea>
+    </div>`;
+
+    html += `<button class="btn-primary" onclick="saveContent('${page}')">Save Content</button>`;
+
+    document.getElementById('content-editor').innerHTML = html;
+  }
+
+  async function saveContent(page) {
+    const sections = {
+      hero: {
+        heading: document.getElementById('content-hero-heading').value,
+        subheading: document.getElementById('content-hero-subheading').value
+      },
+      about: {
+        title: document.getElementById('content-about-title').value,
+        description: document.getElementById('content-about-desc').value
+      }
+    };
+
+    const result = await apiCall(`/content/${page}`, {
+      method: 'PUT',
+      body: JSON.stringify({ sections, metadata: {} })
+    });
+
+    if (result) {
+      showAlert('Content updated', 'success');
+    }
+  }
+
+  // ── SETTINGS ──
+  async function loadSettings() {
+    const data = await apiCall('/settings');
+    if (data) {
+      document.getElementById('setting-title').value = data.siteTitle || '';
+      document.getElementById('setting-hero-subtitle').value = data.hero?.subtitle || '';
+      document.getElementById('setting-footer').value = data.footer?.text || '';
+      document.getElementById('setting-email').value = data.contactEmail || '';
+    }
+  }
+
+  async function saveSettings() {
+    const result = await apiCall('/settings', {
+      method: 'PUT',
+      body: JSON.stringify({
+        siteTitle: document.getElementById('setting-title').value,
+        hero: { subtitle: document.getElementById('setting-hero-subtitle').value },
+        footer: { text: document.getElementById('setting-footer').value },
+        contactEmail: document.getElementById('setting-email').value
+      })
+    });
+
+    if (result) {
+      showAlert('Settings saved', 'success');
+    }
+  }
+
+  // ── UTILITIES ──
+  async function deleteRecord(collection, id) {
+    if (!confirm('Are you sure? This cannot be undone.')) return;
+
+    const result = await apiCall(`/${collection}/${id}`, { method: 'DELETE' });
+    if (result) {
+      showAlert('Record deleted', 'success');
+      if (collection === 'donations') loadDonations();
+      if (collection === 'investor_inquiries') loadInvestors();
+      if (collection === 'contact_messages') loadContacts();
+    }
+  }
+
+  async function exportData(collection) {
+    if (!window._auth || !window._auth.currentUser) return;
+    const idToken = await window._auth.currentUser.getIdToken();
+    window.location.href = `${API_URL}/export/${collection}?token=${encodeURIComponent(idToken)}`;
+  }
+
+  function showAlert(message, type = 'info') {
+    const container = document.getElementById('alert-container');
+    const alert = document.createElement('div');
+    alert.className = `alert alert-${type}`;
+    alert.textContent = message;
+    container.appendChild(alert);
+    setTimeout(() => alert.remove(), 5000);
+  }
+
+  function closeModal(modal) {
+    document.getElementById(`${modal}-modal`).classList.remove('active');
+  }
+
+  function viewDetail(collection, id) {
+    if (collection === 'donations') editDonation(id);
+  }
+</script>
+
+</body>
+</html>
