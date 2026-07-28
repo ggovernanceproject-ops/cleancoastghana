@@ -1249,29 +1249,8 @@
 
     .modal { padding: 2rem 1.5rem; width: 92%; }
     .modal h3 { font-size: 1.4rem; }
-    .admin-trigger { bottom: 1rem; right: 1rem; }
-
-    .dash-stats { flex-direction: column; }
-    #modal-dashboard .modal { padding: 1.5rem; }
   }
 </style>
-
-<!-- Firebase SDK — Auth + Firestore READ only (writes via Cloud Functions) -->
-<script type="module">
-import{initializeApp}from"https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-import{getFirestore,collection,getDocs,orderBy,query,limit}from"https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
-import{getAuth,signInWithEmailAndPassword,signOut,onAuthStateChanged}from"https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
-const cfg={apiKey:"AIzaSyC9GPU8fUKfTFYUiBwOexpdjqe3vLmAk10",authDomain:"ghana-coastline-conservation.firebaseapp.com",projectId:"ghana-coastline-conservation",storageBucket:"ghana-coastline-conservation.firebasestorage.app",messagingSenderId:"835315451838",appId:"1:835315451838:web:afb2b34ee7e1671299dbef"};
-try{
-  const app=initializeApp(cfg),db=getFirestore(app),auth=getAuth(app);
-  window._db=db;window._auth=auth;window._fbCollection=collection;
-  window._fbGetDocs=getDocs;window._fbOrderBy=orderBy;window._fbQuery=query;window._fbLimit=limit;
-  window._fbSignIn=signInWithEmailAndPassword;window._fbSignOut=signOut;
-  window._firebaseReady=true;window.dispatchEvent(new Event('firebaseReady'));
-  onAuthStateChanged(auth,u=>{if(u){const t=document.getElementById('adminTrigger');if(t)t.classList.add('visible');const l=document.getElementById('admin-user-label');if(l)l.textContent=u.email;}});
-  console.log('%cFirebase ready ✓','color:#006D77;font-weight:bold');
-}catch(e){console.error('Firebase init failed:',e.message);window._firebaseReady=false;}
-</script>
 
 <!-- Paystack Inline JS -->
 <script src="https://js.paystack.co/v1/inline.js"></script>
@@ -1591,7 +1570,7 @@ try{
 <!-- FOOTER -->
 <footer>
   <div class="logo">Ghana Coastline Conservation Program <span class="flag">🇬🇭</span></div>
-  <div class="credits">National Beach Protection &amp; Employment Initiative · 2024<span style="margin-left:1.5rem;opacity:0.3;font-size:0.65rem;"><a href="#admin" onclick="openAdminDirect();return false;" style="color:inherit;text-decoration:none;letter-spacing:0.1em;">⚙ ADMIN</a></span></div>
+  <div class="credits">National Beach Protection &amp; Employment Initiative · 2024<span style="margin-left:1.5rem;opacity:0.3;font-size:0.65rem;"><a href="admin.html" style="color:inherit;text-decoration:none;letter-spacing:0.1em;">⚙ ADMIN</a></span></div>
 </footer>
 
 <!-- ── MODALS ── -->
@@ -1739,7 +1718,6 @@ try{
 <script>
 const PAYSTACK_PUBLIC_KEY='pk_live_fbb1e34bbdab4aa2a1a1ba4e4b8c56d442faf9fd';
 const _FN='https://us-central1-ghana-coastline-conservation.cloudfunctions.net';
-function esc(v){if(v==null)return'\u2014';return String(v).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#x27;');}
 async function _sfb(ep,data){try{const r=await fetch(_FN+'/'+ep,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(data)});const j=await r.json();if(!j.ok)console.error('Fn:',j.error);return j.ok;}catch(e){console.error('Fn failed:',e);return false;}}
 let _ci=0;
 const _sl=document.querySelectorAll('.hero-slide'),_dt=document.querySelectorAll('.slide-dot');
@@ -1748,7 +1726,7 @@ function nextSlide(){goToSlide((_ci+1)%_sl.length);}
 setInterval(nextSlide,6000);
 const _ro=new IntersectionObserver(es=>{es.forEach(e=>{if(e.isIntersecting){e.target.classList.add('visible');_ro.unobserve(e.target);}});},{threshold:0.12});
 document.querySelectorAll('.reveal').forEach(r=>_ro.observe(r));
-function openModal(t){document.getElementById('modal-'+t).classList.add('open');document.body.style.overflow='hidden';if(t==='dashboard')_ldsh('donations');}
+function openModal(t){document.getElementById('modal-'+t).classList.add('open');document.body.style.overflow='hidden';}
 function closeModal(t){document.getElementById('modal-'+t).classList.remove('open');document.body.style.overflow='';}
 document.querySelectorAll('.modal-overlay').forEach(o=>o.addEventListener('click',e=>{if(e.target===o){o.classList.remove('open');document.body.style.overflow='';}}));
 function updateCurrencyLabel(){document.getElementById('currency-label').textContent=document.getElementById('donate-currency').value;}
@@ -1796,91 +1774,9 @@ function selectType(el){document.querySelectorAll('.type-btn').forEach(b=>b.clas
 function openDonateFromCard(){const ab=document.querySelector('.amount-btn.active'),cv=document.getElementById('customAmount')?.value||'';const val=cv.replace(/[^0-9.]/g,'')||(ab?ab.textContent.replace(/[^0-9.]/g,''):'100');openModal('donate');setTimeout(()=>{const ae=document.getElementById('donate-amount'),ce=document.getElementById('donate-currency'),le=document.getElementById('currency-label');if(ae&&val)ae.value=val;if(ce&&ab&&ab.textContent.includes('GHS')){ce.value='GHS';if(le)le.textContent='GHS';}},80);}
 const _sc=document.querySelectorAll('section[id]');
 window.addEventListener('scroll',()=>{let cur='';_sc.forEach(s=>{if(window.scrollY>=s.offsetTop-120)cur=s.id;});document.querySelectorAll('.nav-links a').forEach(a=>{a.style.color=(a.getAttribute('href')==='#'+cur)?'var(--gold)':'';});});
-async function adminLogin(){const em=document.getElementById('admin-email').value.trim(),pw=document.getElementById('admin-password').value,er=document.getElementById('admin-error');er.style.display='none';if(!em||!pw){er.textContent='Please enter your email and password.';er.style.display='block';return;}if(!window._firebaseReady){er.textContent='Firebase not connected.';er.style.display='block';return;}try{await window._fbSignIn(window._auth,em,pw);document.getElementById('admin-user-label').textContent=em;closeModal('admin');openModal('dashboard');}catch(e){er.textContent=e.code==='auth/invalid-credential'||e.code==='auth/wrong-password'?'Invalid email or password.':e.code==='auth/too-many-requests'?'Too many attempts. Try again later.':e.message;er.style.display='block';}}
-async function adminLogout(){if(window._fbSignOut&&window._auth)await window._fbSignOut(window._auth);closeModal('dashboard');}
-function switchTab(tab){['donations','investors','contacts'].forEach(t=>{const b=document.getElementById('tab-'+t),a=t===tab;b.style.borderBottomColor=a?'#006D77':'transparent';b.style.color=a?'#006D77':'#999';b.style.fontWeight=a?'600':'400';});_ldsh(tab);}
-async function _ldsh(tab){const ct=document.getElementById('dash-content');ct.innerHTML='<div style="text-align:center;padding:2.5rem;color:#999;">\u23F3 Loading\u2026</div>';if(!window._firebaseReady){ct.innerHTML='<div style="color:#c0392b;padding:1rem;background:#fdf0f0;border-radius:4px;"><strong>Firebase not connected.</strong> Check config.</div>';return;}if(!window._auth||!window._auth.currentUser){ct.innerHTML='<div style="color:#c0392b;padding:1rem;background:#fdf0f0;border-radius:4px;"><strong>Session expired.</strong> Please log in again.</div>';setTimeout(()=>{closeModal('dashboard');openModal('admin');},1500);return;}try{const cm={donations:'donations',investors:'investor_inquiries',contacts:'contact_messages'};const q=window._fbQuery(window._fbCollection(window._db,cm[tab]),window._fbOrderBy('createdAt','desc'),window._fbLimit(200));const sn=await window._fbGetDocs(q);const docs=sn.docs.map(d=>({id:d.id,...d.data()}));if(tab==='donations')_rDon(docs);if(tab==='investors')_rInv(docs);if(tab==='contacts')_rCon(docs);}catch(e){ct.innerHTML=`<div style="color:#c0392b;padding:1rem;background:#fdf0f0;border-radius:4px;"><strong>Error:</strong> ${esc(e.message)}<br><small style="color:#999">Check Firestore security rules allow authenticated reads.</small></div>`;}}
-function _fd(ts){if(!ts)return'\u2014';const d=ts.toDate?ts.toDate():new Date(ts);return d.toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'});}
-function _rDon(docs){const tot=docs.reduce((s,d)=>s+(parseFloat(d.amount)||0),0),pd=docs.filter(d=>d.status==='paid').length;document.getElementById('dash-content').innerHTML=`<div class="dash-stats"><div class="dash-stat"><span>${docs.length}</span><small>Records</small></div><div class="dash-stat"><span>${pd}</span><small>Completed</small></div><div class="dash-stat"><span>${tot.toFixed(2)}</span><small>Total Collected</small></div></div>${docs.length===0?'<p style="color:#999;text-align:center;padding:2rem;">No donations yet.</p>':`<div style="overflow-x:auto"><table class="dash-table"><thead><tr><th>Date</th><th>Name</th><th>Email</th><th>Amount</th><th>Cur</th><th>Type</th><th>Status</th><th>Ref</th></tr></thead><tbody>${docs.map(d=>`<tr><td style="white-space:nowrap">${_fd(d.createdAt)}</td><td>${esc(d.donor_name)}</td><td style="color:#666">${esc(d.email)}</td><td><strong>${esc(d.amount)}</strong></td><td>${esc(d.currency)}</td><td style="color:#666;font-size:0.75rem">${esc(d.frequency).replace(' donation','')}</td><td><span class="${d.status==='paid'?'badge-paid':'badge-pending'}">${esc(d.status)}</span></td><td style="font-size:0.68rem;color:#aaa">${esc(d.paystack_ref).substring(0,22)}</td></tr>`).join('')}</tbody></table></div>`}`;}
-function _rInv(docs){document.getElementById('dash-content').innerHTML=`<div class="dash-stats"><div class="dash-stat"><span>${docs.length}</span><small>Inquiries</small></div></div>${docs.length===0?'<p style="color:#999;text-align:center;padding:2rem;">No inquiries yet.</p>':`<div style="overflow-x:auto"><table class="dash-table"><thead><tr><th>Date</th><th>Name</th><th>Organisation</th><th>Email</th><th>Tier</th><th>Message</th></tr></thead><tbody>${docs.map(d=>`<tr><td style="white-space:nowrap">${_fd(d.createdAt)}</td><td>${esc(d.name)}</td><td>${esc(d.org)}</td><td style="color:#666">${esc(d.email)}</td><td style="font-size:0.75rem">${esc(d.tier)}</td><td style="max-width:200px;color:#666;font-size:0.78rem">${esc(d.message).substring(0,80)}</td></tr>`).join('')}</tbody></table></div>`}`;}
-function _rCon(docs){document.getElementById('dash-content').innerHTML=`<div class="dash-stats"><div class="dash-stat"><span>${docs.length}</span><small>Messages</small></div></div>${docs.length===0?'<p style="color:#999;text-align:center;padding:2rem;">No messages yet.</p>':`<div style="overflow-x:auto"><table class="dash-table"><thead><tr><th>Date</th><th>Name</th><th>Email</th><th>Subject</th><th>Message</th></tr></thead><tbody>${docs.map(d=>`<tr><td style="white-space:nowrap">${_fd(d.createdAt)}</td><td>${esc(d.name)}</td><td style="color:#666">${esc(d.email)}</td><td>${esc(d.subject)}</td><td style="max-width:260px;color:#666;font-size:0.78rem">${esc(d.message).substring(0,100)}</td></tr>`).join('')}</tbody></table></div>`}`;}
-function showAdminTrigger(){document.getElementById('adminTrigger').classList.add('visible');}
-function checkAdminHash(){if(window.location.hash==='#admin')showAdminTrigger();}
-checkAdminHash();
-window.addEventListener('hashchange',checkAdminHash);
-document.addEventListener('keydown',function(e){if((e.ctrlKey||e.metaKey)&&e.shiftKey&&e.key==='A'){e.preventDefault();showAdminTrigger();openModal('admin');}});
-function openAdminDirect(){showAdminTrigger();openModal('admin');}
 function toggleNav(){const nl=document.getElementById('navLinks'),bt=document.getElementById('navToggle');const open=nl.classList.toggle('open');bt.classList.toggle('open',open);bt.setAttribute('aria-expanded',open?'true':'false');document.body.style.overflow=open?'hidden':'';}
 document.querySelectorAll('#navLinks a').forEach(a=>a.addEventListener('click',()=>{const nl=document.getElementById('navLinks'),bt=document.getElementById('navToggle');nl.classList.remove('open');bt.classList.remove('open');bt.setAttribute('aria-expanded','false');document.body.style.overflow='';}));
 window.addEventListener('resize',()=>{if(window.innerWidth>900){const nl=document.getElementById('navLinks'),bt=document.getElementById('navToggle');nl.classList.remove('open');bt.classList.remove('open');document.body.style.overflow='';}});
 </script>
-
-<!-- ── ADMIN LOGIN MODAL ── -->
-<div class="modal-overlay" id="modal-admin">
-  <div class="modal" style="max-width:420px">
-    <button class="modal-close" onclick="closeModal('admin')">✕</button>
-    <h3>Admin Login</h3>
-    <p style="font-size:0.85rem;color:#666;margin-bottom:1.2rem;">Access the submissions dashboard</p>
-    <div id="admin-login-form">
-      <div class="form-group">
-        <label>Email</label>
-        <input type="email" id="admin-email" placeholder="admin@example.com" autocomplete="username">
-      </div>
-      <div class="form-group">
-        <label>Password</label>
-        <input type="password" id="admin-password" placeholder="••••••••" autocomplete="current-password">
-      </div>
-      <div id="admin-error" style="color:#c0392b;font-size:0.82rem;margin-bottom:0.5rem;display:none;"></div>
-      <button class="modal-btn" onclick="adminLogin()">Login →</button>
-    </div>
-  </div>
-</div>
-
-<!-- ── ADMIN DASHBOARD MODAL ── -->
-<div class="modal-overlay" id="modal-dashboard" style="align-items:flex-start;padding-top:0;">
-  <div class="modal" style="max-width:900px;width:95vw;max-height:95vh;overflow-y:auto;border-radius:4px;margin-top:0;">
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1.5rem;">
-      <h3 style="margin:0;">Admin Dashboard</h3>
-      <div style="display:flex;gap:0.8rem;align-items:center;">
-        <span id="admin-user-label" style="font-size:0.75rem;color:#999;"></span>
-        <button onclick="adminLogout()" style="font-size:0.75rem;padding:0.4rem 1rem;border:1px solid #ddd;background:none;cursor:pointer;border-radius:2px;">Logout</button>
-        <button class="modal-close" style="position:static;font-size:1rem;" onclick="closeModal('dashboard')">✕</button>
-      </div>
-    </div>
-    <div style="display:flex;gap:0;border-bottom:2px solid #eee;margin-bottom:1.5rem;">
-      <button class="dash-tab" onclick="switchTab('donations')" id="tab-donations" style="padding:0.6rem 1.5rem;border:none;background:none;cursor:pointer;font-weight:600;font-size:0.82rem;border-bottom:2px solid #006D77;margin-bottom:-2px;color:#006D77;">Donations</button>
-      <button class="dash-tab" onclick="switchTab('investors')" id="tab-investors" style="padding:0.6rem 1.5rem;border:none;background:none;cursor:pointer;font-size:0.82rem;border-bottom:2px solid transparent;margin-bottom:-2px;color:#999;">Investor Inquiries</button>
-      <button class="dash-tab" onclick="switchTab('contacts')" id="tab-contacts" style="padding:0.6rem 1.5rem;border:none;background:none;cursor:pointer;font-size:0.82rem;border-bottom:2px solid transparent;margin-bottom:-2px;color:#999;">Contact Messages</button>
-    </div>
-    <div id="dash-content" style="font-size:0.82rem;">
-      <div style="text-align:center;padding:2rem;color:#999;">Loading…</div>
-    </div>
-  </div>
-</div>
-
-<style>
-  .admin-trigger { position:fixed;bottom:1.5rem;right:1.5rem;z-index:999;opacity:0;pointer-events:none;transition:opacity 0.3s; }
-  .admin-trigger.visible { opacity:1;pointer-events:all; }
-  .admin-trigger button {
-    background:var(--ocean);color:#fff;border:none;border-radius:50%;
-    width:40px;height:40px;font-size:1.1rem;cursor:pointer;
-    box-shadow:0 2px 16px rgba(0,0,0,0.35);
-  }
-  .dash-table { width:100%;border-collapse:collapse; }
-  .dash-table th { background:#f5f5f5;padding:0.6rem 0.8rem;text-align:left;font-weight:600;font-size:0.72rem;letter-spacing:0.05em;text-transform:uppercase;color:#666; }
-  .dash-table td { padding:0.6rem 0.8rem;border-bottom:1px solid #f0f0f0;vertical-align:top; }
-  .dash-table tr:hover td { background:#fafafa; }
-  .badge-paid { background:#d4edda;color:#155724;padding:2px 8px;border-radius:10px;font-size:0.7rem;font-weight:600; }
-  .badge-pending { background:#fff3cd;color:#856404;padding:2px 8px;border-radius:10px;font-size:0.7rem; }
-  .dash-stats { display:flex;gap:1rem;margin-bottom:1.5rem;flex-wrap:wrap; }
-  .dash-stat { background:#f8f9fa;border-radius:4px;padding:0.8rem 1.2rem;flex:1;min-width:140px; }
-  .dash-stat span { display:block;font-size:1.5rem;font-weight:700;color:var(--ocean); }
-  .dash-stat small { font-size:0.72rem;color:#999;text-transform:uppercase;letter-spacing:0.05em; }
-</style>
-
-<div class="admin-trigger" id="adminTrigger">
-  <button onclick="openModal('admin')" title="Admin Login">⚙</button>
-</div>
-
 </body>
 </html>
