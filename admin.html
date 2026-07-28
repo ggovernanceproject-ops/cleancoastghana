@@ -550,7 +550,7 @@
 
     <div class="form-group">
       <label>Email Address</label>
-      <input type="email" id="admin-email-input" placeholder="admin@example.com" autocomplete="username">
+      <input type="email" id="admin-email-input" placeholder="admin@gccp.org" autocomplete="username">
     </div>
     <div class="form-group">
       <label>Password</label>
@@ -709,6 +709,10 @@
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
 import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+import {
+  getFirestore, initializeFirestore, collection, getDocs, query, orderBy, limit,
+  doc, getDoc, setDoc, updateDoc, deleteDoc, serverTimestamp
+} from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
 const cfg = {
   apiKey: "AIzaSyC9GPU8fUKfTFYUiBwOexpdjqe3vLmAk10",
@@ -729,10 +733,26 @@ window._showView = show;
 try {
   const app = initializeApp(cfg);
   const auth = getAuth(app);
+  const db = initializeFirestore(app, {
+    experimentalAutoDetectLongPolling: true,
+    useFetchStreams: false
+  });
 
   window._auth = auth;
+  window._db = db;
   window._fbSignIn = signInWithEmailAndPassword;
   window._fbSignOut = signOut;
+  window._fbCollection = collection;
+  window._fbGetDocs = getDocs;
+  window._fbQuery = query;
+  window._fbOrderBy = orderBy;
+  window._fbLimit = limit;
+  window._fbDoc = doc;
+  window._fbGetDoc = getDoc;
+  window._fbSetDoc = setDoc;
+  window._fbUpdateDoc = updateDoc;
+  window._fbDeleteDoc = deleteDoc;
+  window._fbServerTimestamp = serverTimestamp;
   window._firebaseReady = true;
 
   onAuthStateChanged(auth, (u) => {
@@ -809,8 +829,27 @@ try {
   });
 
   /* ── DASHBOARD ── */
-  const API_URL = '/api';
   let dashboardInitialized = false;
+  // Cached data — avoids re-fetching Firestore every time a row is viewed/edited
+  let donationsCache = [];
+  let investorsCache = [];
+  let contactsCache = [];
+
+  async function fetchCollection(name, max = 200) {
+    const q = window._fbQuery(
+      window._fbCollection(window._db, name),
+      window._fbOrderBy('createdAt', 'desc'),
+      window._fbLimit(max)
+    );
+    const snap = await window._fbGetDocs(q);
+    return snap.docs.map(d => ({ id: d.id, ...d.data() }));
+  }
+
+  function tsToDateString(ts) {
+    if (!ts) return '—';
+    const d = ts.toDate ? ts.toDate() : (ts.seconds ? new Date(ts.seconds * 1000) : new Date(ts));
+    return d.toLocaleDateString();
+  }
 
   window._initDashboard = function () {
     if (dashboardInitialized) return; // don't reset tabs/state on token refresh etc.
@@ -840,66 +879,24 @@ try {
     if (tab === 'settings') loadSettings();
   }
 
-  // ── API CALLS (authenticated with the signed-in admin's Firebase ID token) ──
-  async function apiCall(endpoint, options = {}) {
-    if (!window._auth || !window._auth.currentUser) {
-      logout();
-      return;
-    }
-
-    let idToken;
-    try {
-      idToken = await window._auth.currentUser.getIdToken();
-    } catch (e) {
-      logout();
-      return;
-    }
-
-    const headers = {
-      'Authorization': `Bearer ${idToken}`,
-      'Content-Type': 'application/json',
-      ...options.headers
-    };
-
-    try {
-      const response = await fetch(`${API_URL}${endpoint}`, {
-        ...options,
-        headers
-      });
-
-      if (response.status === 401) {
-        logout();
-        return;
-      }
-
-      if (!response.ok) {
-        const error = await response.json();
-        showAlert(error.error || 'Error', 'error');
-        throw new Error(error.error);
-      }
-
-      return await response.json();
-    } catch (error) {
-      console.error('API Error:', error);
-      showAlert(error.message, 'error');
-    }
-  }
-
   // ── DASHBOARD ──
   async function loadDashboard() {
-    const donations = await apiCall('/donations');
-    const investors = await apiCall('/investors');
-    const contacts = await apiCall('/contacts');
-
-    if (donations) {
-      document.getElementById('stat-donations').textContent = donations.stats.total;
-      document.getElementById('stat-revenue').textContent = donations.stats.totalAmount.toFixed(2);
+    try {
+      donationsCache = await fetchCollection('donations', 500);
+      investorsCache = await fetchCollection('investor_inquiries', 500);
+      contactsCache = await fetchCollection('contact_messages', 500);
+    } catch (e) {
+      showAlert(e.message, 'error');
+      return;
     }
-    if (investors) document.getElementById('stat-investors').textContent = investors.total;
-    if (contacts) document.getElementById('stat-contacts').textContent = contacts.total;
 
-    // Show recent donations
-    if (donations && donations.data.length > 0) {
+    const totalAmount = donationsCache.reduce((s, d) => s + (parseFloat(d.amount) || 0), 0);
+    document.getElementById('stat-donations').textContent = donationsCache.length;
+    document.getElementById('stat-revenue').textContent = totalAmount.toFixed(2);
+    document.getElementById('stat-investors').textContent = investorsCache.length;
+    document.getElementById('stat-contacts').textContent = contactsCache.length;
+
+    if (donationsCache.length > 0) {
       const html = `
         <div class="table-wrapper">
           <table>
@@ -913,9 +910,9 @@ try {
               </tr>
             </thead>
             <tbody>
-              ${donations.data.slice(0, 5).map(d => `
+              ${donationsCache.slice(0, 5).map(d => `
                 <tr>
-                  <td>${new Date(d.createdAt.seconds * 1000).toLocaleDateString()}</td>
+                  <td>${tsToDateString(d.createdAt)}</td>
                   <td>${d.donor_name}</td>
                   <td>${d.currency} ${d.amount}</td>
                   <td><span class="badge ${d.status === 'paid' ? 'badge-success' : 'badge-warning'}">${d.status}</span></td>
@@ -927,13 +924,25 @@ try {
         </div>
       `;
       document.getElementById('recent-donations').innerHTML = html;
+    } else {
+      document.getElementById('recent-donations').innerHTML = '<div class="empty-state"><p>No donations yet.</p></div>';
     }
   }
 
   // ── DONATIONS ──
   async function loadDonations() {
-    const data = await apiCall('/donations?limit=500');
-    if (!data) return;
+    document.getElementById('donations-table').innerHTML = '<div class="loading"><div class="spinner"></div> Loading...</div>';
+    try {
+      donationsCache = await fetchCollection('donations', 500);
+    } catch (e) {
+      document.getElementById('donations-table').innerHTML = `<div class="empty-state"><p>Error: ${e.message}</p></div>`;
+      return;
+    }
+
+    if (donationsCache.length === 0) {
+      document.getElementById('donations-table').innerHTML = '<div class="empty-state"><p>No donations yet.</p></div>';
+      return;
+    }
 
     const html = `
       <div class="table-wrapper">
@@ -950,9 +959,9 @@ try {
             </tr>
           </thead>
           <tbody>
-            ${data.data.map(d => `
+            ${donationsCache.map(d => `
               <tr>
-                <td>${new Date(d.createdAt.seconds * 1000).toLocaleDateString()}</td>
+                <td>${tsToDateString(d.createdAt)}</td>
                 <td>${d.donor_name}</td>
                 <td>${d.email}</td>
                 <td><strong>${d.amount}</strong></td>
@@ -973,9 +982,8 @@ try {
     document.getElementById('donations-table').innerHTML = html;
   }
 
-  async function editDonation(id) {
-    const data = await apiCall('/donations');
-    const donation = data.data.find(d => d.id === id);
+  function editDonation(id) {
+    const donation = donationsCache.find(d => d.id === id);
     if (!donation) return;
 
     const html = `
@@ -1007,22 +1015,34 @@ try {
     const status = document.getElementById('edit-status').value;
     const notes = document.getElementById('edit-notes').value;
 
-    const result = await apiCall(`/donations/${id}`, {
-      method: 'PATCH',
-      body: JSON.stringify({ status, notes })
-    });
-
-    if (result) {
+    try {
+      await window._fbUpdateDoc(window._fbDoc(window._db, 'donations', id), {
+        status,
+        notes: notes || '',
+        updatedAt: window._fbServerTimestamp()
+      });
       showAlert('Donation updated', 'success');
       closeModal('detail');
       loadDonations();
+    } catch (e) {
+      showAlert(e.message, 'error');
     }
   }
 
   // ── INVESTORS ──
   async function loadInvestors() {
-    const data = await apiCall('/investors?limit=500');
-    if (!data) return;
+    document.getElementById('investors-table').innerHTML = '<div class="loading"><div class="spinner"></div> Loading...</div>';
+    try {
+      investorsCache = await fetchCollection('investor_inquiries', 500);
+    } catch (e) {
+      document.getElementById('investors-table').innerHTML = `<div class="empty-state"><p>Error: ${e.message}</p></div>`;
+      return;
+    }
+
+    if (investorsCache.length === 0) {
+      document.getElementById('investors-table').innerHTML = '<div class="empty-state"><p>No inquiries yet.</p></div>';
+      return;
+    }
 
     const html = `
       <div class="table-wrapper">
@@ -1038,9 +1058,9 @@ try {
             </tr>
           </thead>
           <tbody>
-            ${data.data.map(d => `
+            ${investorsCache.map(d => `
               <tr>
-                <td>${new Date(d.createdAt.seconds * 1000).toLocaleDateString()}</td>
+                <td>${tsToDateString(d.createdAt)}</td>
                 <td>${d.name}</td>
                 <td>${d.org}</td>
                 <td>${d.email}</td>
@@ -1060,9 +1080,8 @@ try {
     document.getElementById('investors-table').innerHTML = html;
   }
 
-  async function viewInvestor(id) {
-    const data = await apiCall('/investors');
-    const investor = data.data.find(i => i.id === id);
+  function viewInvestor(id) {
+    const investor = investorsCache.find(i => i.id === id);
     if (!investor) return;
 
     const html = `
@@ -1091,8 +1110,18 @@ try {
 
   // ── CONTACTS ──
   async function loadContacts() {
-    const data = await apiCall('/contacts?limit=500');
-    if (!data) return;
+    document.getElementById('contacts-table').innerHTML = '<div class="loading"><div class="spinner"></div> Loading...</div>';
+    try {
+      contactsCache = await fetchCollection('contact_messages', 500);
+    } catch (e) {
+      document.getElementById('contacts-table').innerHTML = `<div class="empty-state"><p>Error: ${e.message}</p></div>`;
+      return;
+    }
+
+    if (contactsCache.length === 0) {
+      document.getElementById('contacts-table').innerHTML = '<div class="empty-state"><p>No messages yet.</p></div>';
+      return;
+    }
 
     const html = `
       <div class="table-wrapper">
@@ -1107,9 +1136,9 @@ try {
             </tr>
           </thead>
           <tbody>
-            ${data.data.map(d => `
+            ${contactsCache.map(d => `
               <tr>
-                <td>${new Date(d.createdAt.seconds * 1000).toLocaleDateString()}</td>
+                <td>${tsToDateString(d.createdAt)}</td>
                 <td>${d.name}</td>
                 <td>${d.email}</td>
                 <td>${d.subject}</td>
@@ -1128,9 +1157,8 @@ try {
     document.getElementById('contacts-table').innerHTML = html;
   }
 
-  async function viewContact(id) {
-    const data = await apiCall('/contacts');
-    const contact = data.data.find(c => c.id === id);
+  function viewContact(id) {
+    const contact = contactsCache.find(c => c.id === id);
     if (!contact) return;
 
     const html = `
@@ -1156,8 +1184,16 @@ try {
   // ── CONTENT MANAGEMENT ──
   async function loadContent() {
     const page = document.getElementById('content-page').value;
-    const data = await apiCall(`/content/${page}`);
-    if (!data) return;
+    document.getElementById('content-editor').innerHTML = '<div class="loading"><div class="spinner"></div> Loading...</div>';
+
+    let data = { sections: {} };
+    try {
+      const snap = await window._fbGetDoc(window._fbDoc(window._db, 'page_content', page));
+      if (snap.exists()) data = snap.data();
+    } catch (e) {
+      document.getElementById('content-editor').innerHTML = `<div class="empty-state"><p>Error: ${e.message}</p></div>`;
+      return;
+    }
 
     let html = `<h4 style="margin-top:1.5rem;margin-bottom:1rem;">Hero Section</h4>`;
     html += `<div class="form-group">
@@ -1196,60 +1232,99 @@ try {
       }
     };
 
-    const result = await apiCall(`/content/${page}`, {
-      method: 'PUT',
-      body: JSON.stringify({ sections, metadata: {} })
-    });
-
-    if (result) {
+    try {
+      await window._fbSetDoc(window._fbDoc(window._db, 'page_content', page), {
+        page,
+        sections,
+        metadata: {},
+        updatedAt: window._fbServerTimestamp(),
+        updatedBy: window._auth.currentUser?.email || null
+      }, { merge: true });
       showAlert('Content updated', 'success');
+    } catch (e) {
+      showAlert(e.message, 'error');
     }
   }
 
   // ── SETTINGS ──
   async function loadSettings() {
-    const data = await apiCall('/settings');
-    if (data) {
+    try {
+      const snap = await window._fbGetDoc(window._fbDoc(window._db, 'settings', 'main'));
+      const data = snap.exists() ? snap.data() : {};
       document.getElementById('setting-title').value = data.siteTitle || '';
       document.getElementById('setting-hero-subtitle').value = data.hero?.subtitle || '';
       document.getElementById('setting-footer').value = data.footer?.text || '';
       document.getElementById('setting-email').value = data.contactEmail || '';
+    } catch (e) {
+      showAlert(e.message, 'error');
     }
   }
 
   async function saveSettings() {
-    const result = await apiCall('/settings', {
-      method: 'PUT',
-      body: JSON.stringify({
+    try {
+      await window._fbSetDoc(window._fbDoc(window._db, 'settings', 'main'), {
         siteTitle: document.getElementById('setting-title').value,
         hero: { subtitle: document.getElementById('setting-hero-subtitle').value },
         footer: { text: document.getElementById('setting-footer').value },
-        contactEmail: document.getElementById('setting-email').value
-      })
-    });
-
-    if (result) {
+        contactEmail: document.getElementById('setting-email').value,
+        updatedAt: window._fbServerTimestamp(),
+        updatedBy: window._auth.currentUser?.email || null
+      }, { merge: true });
       showAlert('Settings saved', 'success');
+    } catch (e) {
+      showAlert(e.message, 'error');
     }
   }
 
   // ── UTILITIES ──
-  async function deleteRecord(collection, id) {
+  async function deleteRecord(collectionName, id) {
     if (!confirm('Are you sure? This cannot be undone.')) return;
 
-    const result = await apiCall(`/${collection}/${id}`, { method: 'DELETE' });
-    if (result) {
+    try {
+      await window._fbDeleteDoc(window._fbDoc(window._db, collectionName, id));
       showAlert('Record deleted', 'success');
-      if (collection === 'donations') loadDonations();
-      if (collection === 'investor_inquiries') loadInvestors();
-      if (collection === 'contact_messages') loadContacts();
+      if (collectionName === 'donations') loadDonations();
+      if (collectionName === 'investor_inquiries') loadInvestors();
+      if (collectionName === 'contact_messages') loadContacts();
+    } catch (e) {
+      showAlert(e.message, 'error');
     }
   }
 
-  async function exportData(collection) {
-    if (!window._auth || !window._auth.currentUser) return;
-    const idToken = await window._auth.currentUser.getIdToken();
-    window.location.href = `${API_URL}/export/${collection}?token=${encodeURIComponent(idToken)}`;
+  function exportData(collectionName) {
+    const map = {
+      donations: donationsCache,
+      investor_inquiries: investorsCache,
+      contact_messages: contactsCache
+    };
+    const docs = map[collectionName] || [];
+
+    if (docs.length === 0) {
+      showAlert('No data to export', 'info');
+      return;
+    }
+
+    const headers = Object.keys(docs[0]).filter(k => k !== 'id');
+    const csvRows = [
+      headers.join(','),
+      ...docs.map(item =>
+        headers.map(h => {
+          let val = item[h];
+          if (val && typeof val === 'object' && val.toDate) val = val.toDate().toISOString();
+          else if (val && typeof val === 'object') val = JSON.stringify(val);
+          const s = String(val ?? '');
+          return s.includes(',') ? `"${s.replace(/"/g, '""')}"` : s;
+        }).join(',')
+      )
+    ].join('\n');
+
+    const blob = new Blob([csvRows], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${collectionName}-export.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
   }
 
   function showAlert(message, type = 'info') {
